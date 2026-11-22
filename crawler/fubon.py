@@ -223,13 +223,20 @@ def x_basic(html_text):
 
 
 def x_div(html_text):
-    """年度現金股利(小計)：只取列首為 4 位數年度的列(不含 2025/2H 這類半年列)。"""
+    """年度現金股利(小計)：只取列首為 4 位數年度的列(不含 2025/2H 這類半年列)。
+    富邦此頁 HTML 缺 <tr> 開頭標籤，用 lxml 會整頁被併成一列，所以直接掃 <td> 序列。"""
     out = {}
-    for cells in parse_rows(html_text):
-        if len(cells) >= 4 and re.fullmatch(r"\d{4}", cells[0]):
-            v = to_num(cells[3])
-            if v is not None and cells[0] not in out:
-                out[cells[0]] = v
+    if not html_text:
+        return out
+    toks = [norm(re.sub(r"<[^>]+>", "", t))
+            for t in re.findall(r"<td[^>]*>(.*?)</td>", html_text, flags=re.S | re.I)]
+    for i, t in enumerate(toks):
+        if re.fullmatch(r"\d{4}", t) and i + 3 < len(toks) and t not in out:
+            if to_num(toks[i + 1]) is None or to_num(toks[i + 2]) is None:
+                continue
+            v = to_num(toks[i + 3])
+            if v is not None:
+                out[t] = v
     return out
 
 

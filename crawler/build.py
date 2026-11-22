@@ -157,6 +157,23 @@ def main(argv=None):
             n_price += 1
     print(f"股價更新：{n_price} 檔 ({time.time() - t0:.0f}s)")
 
+    # ---------- 2b. 補抓股利(舊版解析器漏抓，只補股利頁一頁) ----------
+    n_divfix = 0
+    if not a.prices_only:
+        for c, f in list(facts.items()):
+            if not f or f.get("status") != "ok" or f.get("div_v") == 2 or c not in info:
+                continue
+            if time.time() > deadline - 60:
+                break
+            h = fx.get("div", c)
+            if h is None:
+                continue
+            f["div"] = fubon.x_div(h)
+            f["div_v"] = 2
+            save_json(fpath(c), f)
+            n_divfix += 1
+        print(f"補抓股利：{n_divfix} 檔")
+
     # ---------- 3. 財報(輪流) ----------
     n_fund = n_nodata = 0
     failures = []
@@ -187,7 +204,7 @@ def main(argv=None):
                     "listed": r["listed"], "is_fin": is_fin}
             if status == "ok":
                 px = fubon.fetch_price(fx, c) or ((facts.get(c) or {}).get("px")) or {}
-                f = {**base, **part, "px": px, "px_at": iso(), "fund_at": iso(), "status": "ok"}
+                f = {**base, **part, "px": px, "px_at": iso(), "fund_at": iso(), "status": "ok", "div_v": 2}
                 facts[c] = f
                 save_json(fpath(c), f)
                 n_fund += 1
