@@ -161,7 +161,7 @@ def main(argv=None):
     n_divfix = 0
     if not a.prices_only:
         for c, f in list(facts.items()):
-            if not f or f.get("status") != "ok" or f.get("div_v") == 3 or c not in info:
+            if not f or f.get("status") != "ok" or f.get("div_v") == 4 or c not in info:
                 continue
             if time.time() > deadline - 60:
                 break
@@ -171,7 +171,7 @@ def main(argv=None):
                 continue
             f["div"] = fubon.x_div(h)
             f["bm"] = fubon.x_bm(hb)
-            f["div_v"] = 3
+            f["div_v"] = 4
             save_json(fpath(c), f)
             n_divfix += 1
         print(f"補抓股利與董監持股：{n_divfix} 檔")
@@ -206,7 +206,7 @@ def main(argv=None):
                     "listed": r["listed"], "is_fin": is_fin}
             if status == "ok":
                 px = fubon.fetch_price(fx, c) or ((facts.get(c) or {}).get("px")) or {}
-                f = {**base, **part, "px": px, "px_at": iso(), "fund_at": iso(), "status": "ok", "div_v": 3}
+                f = {**base, **part, "px": px, "px_at": iso(), "fund_at": iso(), "status": "ok", "div_v": 4}
                 facts[c] = f
                 save_json(fpath(c), f)
                 n_fund += 1

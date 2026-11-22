@@ -249,7 +249,7 @@ def x_bm(html_text):
             sh, ratio, pl = to_num(cells[2]), to_pct(cells[3]), to_num(cells[4])
             if sh is None and ratio is None:
                 continue
-            k = cells[1]
+            k = cells[1].split("-")[0].strip()   # 「交通部-簡志誠」= 法人-代表人，同一法人只算一次
             o = seen.get(k, (0.0, 0.0, 0.0))
             seen[k] = (max(o[0], sh or 0.0), max(o[1], ratio or 0.0), max(o[2], pl or 0.0))
     if not seen:
