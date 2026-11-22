@@ -1,0 +1,96 @@
+name: 更新資料並發布
+
+on:
+  schedule:
+    - cron: "30 10 * * 1-5"      # 台灣時間 週一~週五 18:30(UTC 10:30)，收盤後更新
+  workflow_dispatch:
+    inputs:
+      codes:
+        description: "測試用：只更新這些代號(逗號分隔，例如 1707,2330)；留空＝正式更新全部"
+        required: false
+        default: ""
+      deploy:
+        description: "測試時是否仍要發布到網站(正式更新一律發布)"
+        type: boolean
+        default: false
+      force_fund:
+        description: "強制重抓全部財報(約需 2~3 小時)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write      # 把計算狀態存到 data 分支
+  pages: write
+  id-token: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: 單元測試(計算邏輯要和 Excel 版一致)
+        run: python -m unittest discover -s tests
+
+      - name: 取回上次的狀態(data 分支)
+        run: |
+          if git ls-remote --exit-code --heads origin data >/dev/null 2>&1; then
+            git clone --depth 1 --branch data "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" state
+            rm -rf state/.git
+          else
+            mkdir -p state
+          fi
+
+      - name: 更新股價與財報、計算
+        env:
+          CODES: ${{ inputs.codes }}
+          FORCE: ${{ inputs.force_fund }}
+        run: |
+          ARGS="--state state --out site/data --budget-min 300"
+          if [ -n "$CODES" ]; then ARGS="$ARGS --codes $CODES"; fi
+          if [ "$FORCE" = "true" ]; then ARGS="$ARGS --force-fund"; fi
+          python -m crawler.build $ARGS
+
+      - name: 組合網站
+        run: |
+          mkdir -p site
+          cp -r docs/. site/
+          ls site site/data | head -20
+
+      - name: 儲存狀態到 data 分支(只保留最新一份，不累積歷史)
+        if: ${{ inputs.codes == '' }}
+        run: |
+          cd state
+          git init -q -b data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "state $(date -u +%FT%TZ)"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" data
+
+      - uses: actions/configure-pages@v5
+        if: ${{ inputs.codes == '' || inputs.deploy }}
+
+      - uses: actions/upload-pages-artifact@v3
+        if: ${{ inputs.codes == '' || inputs.deploy }}
+        with:
+          path: site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
+        if: ${{ inputs.codes == '' || inputs.deploy }}
