@@ -1,0 +1,19 @@
+{
+  "_說明": "估價參數(對應 v5「決策總覽」的黃底儲存格)。修改後,下一次更新就會套用。",
+  "pe_low": 10,
+  "pe_mid": 15,
+  "pe_high": 18,
+  "market_pe_adjust": 0,
+  "risk_free_rate": 1.5,
+  "buffett_indicator": null,
+  "min_score_elite": 13,
+  "fund_ttl_days": 7,
+  "nodata_ttl_days": 30,
+  "request_delay_sec": 0.7,
+  "thresholds": {
+    "roe5_avg": 15, "roe_1y": 20, "op_margin": 10, "fcf5_avg": 0, "fcf_1y": 1,
+    "cfo_ni_pct": 50, "insider_hold_pct": 10, "pledge_pct_max": 10, "listed_years": 5,
+    "eps_min": 1, "roe_min": 10
+  },
+  "cyclical_industries": ["鋼鐵工業","航運業","塑膠工業","水泥工業","造紙工業","玻璃陶瓷","化學工業","橡膠工業"]
+}
