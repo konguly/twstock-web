@@ -433,7 +433,14 @@ def analyze(f, cfg=None, today=None):
         warn.append("5年自由現金發放率為負")
 
     z = zones[2]
-    if price is None or e_mix is None:
+    # 資料健全性：股價/近4季EPS < 3 倍幾乎必為股票分割、減資等造成的 EPS 未還原
+    anom = bool(price and eps_ttm and eps_ttm > 0 and price / eps_ttm < 3)
+    if anom:
+        up_pe = up_g = None
+        warn.append("股價與EPS不一致(疑似股票分割/減資，EPS未還原)")
+    if anom:
+        sig = "資料異常：股價與EPS不一致(疑似股票分割/減資)，請人工確認"
+    elif price is None or e_mix is None:
         sig = "資料不足"
     elif e_mix <= 0:
         sig = "虧損：本益比不適用，不建議"
@@ -445,7 +452,7 @@ def analyze(f, cfg=None, today=None):
         sig = z + ("，但體質轉弱：觀察／分批" if weak > 0 else
                    "：符合買點條件" if z == "低估區" else "：可分批布局" if z == "合理偏低" else
                    "：宜保守，等待更好價格")
-    if sig == "資料不足":
+    if sig == "資料不足" or anom:
         cat = "na"
     elif "不建議" in sig:
         cat = "avoid"

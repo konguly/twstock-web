@@ -241,21 +241,23 @@ def x_div(html_text):
 
 
 def x_bm(html_text):
-    """董監(董事+監察人)持股比例%、質押比例%。職稱含「董事」或「監察人」的列合計。"""
-    hold = shares = pledged = 0.0
-    seen = False
+    """董監(董事+監察人)持股比例%、質押比例%。職稱含「董事」或「監察人」的列合計；
+    同一姓名/法人若在多個職稱重複出現(例如法人董事與其代表人)只算一次(取最大值)。"""
+    seen = {}
     for cells in parse_rows(html_text):
         if len(cells) >= 5 and ("董事" in cells[0] or "監察人" in cells[0]):
             sh, ratio, pl = to_num(cells[2]), to_pct(cells[3]), to_num(cells[4])
             if sh is None and ratio is None:
                 continue
-            seen = True
-            hold += ratio or 0.0
-            shares += sh or 0.0
-            pledged += pl or 0.0
+            k = cells[1]
+            o = seen.get(k, (0.0, 0.0, 0.0))
+            seen[k] = (max(o[0], sh or 0.0), max(o[1], ratio or 0.0), max(o[2], pl or 0.0))
     if not seen:
         return {"hold_pct": None, "pledge_pct": None}
-    return {"hold_pct": round(hold, 4),
+    shares = sum(v[0] for v in seen.values())
+    hold = sum(v[1] for v in seen.values())
+    pledged = sum(v[2] for v in seen.values())
+    return {"hold_pct": round(min(hold, 100.0), 4),
             "pledge_pct": (round(pledged / shares * 100, 4) if shares else None)}
 
 
