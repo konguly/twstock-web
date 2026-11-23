@@ -100,6 +100,32 @@
       (s.hl ? '<div class="meta">' + esc(s.hl) + "</div>" : "") + "</a>";
   }
 
+  function fillResults() {
+    var MINS = MIN_SCORE;
+    var list = filtered();
+    var hints = {
+      elite: "獲利矩陣積分 ≥ " + MIN_SCORE + "（A=3、B1=2、B2=1，看近4季＋近4年，滿分15）。",
+      buy: "品質通過，且折衷版預估EPS下現價落在「低估區」或「合理偏低」。",
+      all: "所有已分析的股票。"
+    };
+    var h = '<p class="hint">' + hints[state.tab] + " 共 " + list.length + " 檔。</p>";
+    if (!list.length) h += '<div class="empty">沒有符合的股票</div>';
+    var shown = list.slice(0, state.shown), lastInd = null;
+    shown.forEach(function (s) {
+      if (state.tab === "elite" && state.sort === "score" && s.i !== lastInd) {
+        var cnt = list.filter(function (x) { return x.i === s.i; }).length;
+        h += '<div class="group-h"><span>' + esc(s.i || "其他") + "</span><span>" + cnt + " 檔</span></div>";
+        lastInd = s.i;
+      }
+      h += cardHtml(s);
+    });
+    if (list.length > shown.length) h += '<button class="more" id="more">顯示更多（還有 ' + (list.length - shown.length) + " 檔）</button>";
+    
+    document.getElementById("results").innerHTML = h;
+    var more = document.getElementById("more");
+    if (more) more.onclick = function () { state.shown += PAGE; renderList(); };
+  }
+
   function renderList() {
     var industries = {};
     INDEX.stocks.forEach(function (s) { if (s.i) industries[s.i] = 1; });
@@ -115,39 +141,22 @@
       }).join("") + "</select>" +
       '<select id="sort">' + [["score", state.tab === "elite" ? "依產業、積分" : "積分高→低"], ["upside", "增值潛力高→低"], ["yield", "殖利率高→低"], ["code", "代號"]]
         .map(function (o) { return '<option value="' + o[0] + '"' + (state.sort === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select></div>";
-    var list = filtered();
-    var hints = {
-      elite: "獲利矩陣積分 ≥ " + MIN_SCORE + "（A=3、B1=2、B2=1，看近4季＋近4年，滿分15）。",
-      buy: "品質通過，且折衷版預估EPS下現價落在「低估區」或「合理偏低」。",
-      all: "所有已分析的股票。"
-    };
-    h += '<p class="hint">' + hints[state.tab] + " 共 " + list.length + " 檔。</p>";
-    if (!list.length) h += '<div class="empty">沒有符合的股票</div>';
-    var shown = list.slice(0, state.shown), lastInd = null;
-    shown.forEach(function (s) {
-      if (state.tab === "elite" && state.sort === "score" && s.i !== lastInd) {
-        var cnt = list.filter(function (x) { return x.i === s.i; }).length;
-        h += '<div class="group-h"><span>' + esc(s.i || "其他") + "</span><span>" + cnt + " 檔</span></div>";
-        lastInd = s.i;
-      }
-      h += cardHtml(s);
-    });
-    if (list.length > shown.length) h += '<button class="more" id="more">顯示更多（還有 ' + (list.length - shown.length) + " 檔）</button>";
+    h += '<div id="results"></div>';
     app.innerHTML = h;
+    fillResults();
     app.querySelectorAll(".tab").forEach(function (b) {
       b.onclick = function () { state.tab = b.dataset.tab; state.shown = PAGE; if (state.tab === "elite") state.sort = "score"; renderList(); };
     });
     var q = document.getElementById("q");
-    q.oninput = function () {
-      state.q = q.value; state.shown = PAGE;
-      var pos = q.selectionStart;
-      renderList();
-      var nq = document.getElementById("q"); nq.focus(); nq.setSelectionRange(pos, pos);
-    };
+    var composing = false;
+    q.addEventListener("compositionstart", function () { composing = true; });
+    q.addEventListener("compositionend", function () { composing = false; state.q = q.value; state.shown = PAGE; fillResults(); });
+    q.addEventListener("input", function (e) {
+      if (composing || e.isComposing) return;   // 注音/拼音輸入中先不重畫，避免打斷輸入法
+      state.q = q.value; state.shown = PAGE; fillResults();
+    });
     document.getElementById("ind").onchange = function (e) { state.ind = e.target.value; state.shown = PAGE; renderList(); };
     document.getElementById("sort").onchange = function (e) { state.sort = e.target.value; state.shown = PAGE; renderList(); };
-    var more = document.getElementById("more");
-    if (more) more.onclick = function () { state.shown += PAGE; renderList(); };
   }
 
   /* ---------- 個股頁 ---------- */
