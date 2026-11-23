@@ -184,12 +184,14 @@ def x_cf(lines):
 
 def x_fr_annual(lines):
     return {"per": period_vals(lines), "eps": fvals(lines, "每股盈餘"),
-            "bv": fvals(lines, "每股淨值(F)(TSE公告數)")}
+            "bv": fvals(lines, "每股淨值(F)(TSE公告數)"),
+            "roe": fvals(lines, "ROE(A)─稅後"), "debt": fvals(lines, "負債比率％")}
 
 
 def x_fr_quarter(lines):
     return {"per": period_vals(lines), "eps": fvals(lines, "每股盈餘"),
-            "bv": fvals(lines, "每股淨值(F)(TSE公告數)")}
+            "bv": fvals(lines, "每股淨值(F)(TSE公告數)"),
+            "roe": fvals(lines, "ROE(A)─稅後"), "debt": fvals(lines, "負債比率％")}
 
 
 def _next_num(cells, i):
@@ -283,12 +285,9 @@ def fetch_price(fx, code):
 
 
 def fetch_fundamentals(fx, code, is_fin):
-    """抓財報類 11 頁。回傳 (facts_part, status)；status: ok / nodata / fail"""
+    """抓選股需要的 5 頁(損益年/季、財務比率年/季、股利)。回傳 (facts_part, status)；status: ok / nodata / fail"""
     pages = {}
-    keys = ["isA", "isQ", "bsA", "bsQ", "frA", "frQ", "div", "bm", "rev"]
-    if not is_fin:
-        keys += ["cfA", "cfQ"]
-    for k in keys:
+    for k in ["isA", "isQ", "frA", "frQ", "div"]:
         pages[k] = fx.get(k, code)
         if k == "isA":
             if pages[k] is None:
@@ -296,20 +295,20 @@ def fetch_fundamentals(fx, code, is_fin):
             lines = parse_main_lines(pages[k])
             if not lines or find_vals(lines, "常續性稅後淨利") is None:
                 return None, "nodata"
-    if any(pages[k] is None for k in ("isQ", "bsA", "bsQ", "frA", "frQ")):
+    if any(pages[k] is None for k in ("isQ", "frA", "frQ")):
         return None, "fail"
-    L = {k: parse_main_lines(pages[k]) for k in pages if k in
-         ("isA", "isQ", "bsA", "bsQ", "cfA", "cfQ", "frA", "frQ")}
+    L = {k: parse_main_lines(pages[k]) for k in ("isA", "isQ", "frA", "frQ")}
     f = {
         "isA": x_is_annual(L["isA"]), "isQ": x_is_quarter(L["isQ"]),
-        "bsA": x_bs_annual(L["bsA"]), "bsQ": x_bs_quarter(L["bsQ"]),
         "frA": x_fr_annual(L["frA"]), "frQ": x_fr_quarter(L["frQ"]),
         "div": x_div(pages["div"]) if pages.get("div") else {},
-        "bm": x_bm(pages["bm"]) if pages.get("bm") else {"hold_pct": None, "pledge_pct": None},
-        "rev": x_rev(pages["rev"]) if pages.get("rev") else [],
     }
-    if not is_fin:
-        if pages.get("cfA") is None or pages.get("cfQ") is None:
-            return None, "fail"
-        f["cfA"], f["cfQ"] = x_cf(L["cfA"]), x_cf(L["cfQ"])
     return f, "ok"
+
+
+def fetch_ratios(fx, code):
+    """只重抓財務比率年/季兩頁(舊資料沒有 ROE、負債比率時補抓用)。失敗回傳 None。"""
+    ha, hq = fx.get("frA", code), fx.get("frQ", code)
+    if ha is None or hq is None:
+        return None
+    return {"frA": x_fr_annual(parse_main_lines(ha)), "frQ": x_fr_quarter(parse_main_lines(hq))}

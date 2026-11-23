@@ -104,8 +104,7 @@ def main(argv=None):
     ap.add_argument("--force-fund", action="store_true")
     a = ap.parse_args(argv)
 
-    cfg = {**scoring.DEFAULT_CFG, **(load_json(a.config, {}) or {})}
-    cfg["thresholds"] = {**scoring.DEFAULT_CFG["thresholds"], **(cfg.get("thresholds") or {})}
+    cfg = scoring.merged_cfg(load_json(a.config, {}) or {})
     refs = load_json(a.refs, {}) or {}
     fx = fubon.Fetcher(delay=float(cfg.get("request_delay_sec", 0.7)))
     guard = Guard(fx)
@@ -157,24 +156,23 @@ def main(argv=None):
             n_price += 1
     print(f"股價更新：{n_price} 檔 ({time.time() - t0:.0f}s)")
 
-    # ---------- 2b. 補抓股利(舊版解析器漏抓，只補股利頁一頁) ----------
-    n_divfix = 0
+    # ---------- 2b. 補抓 ROE 與負債比率(V6 新選股法需要；舊資料沒有這兩欄) ----------
+    n_fix = 0
     if not a.prices_only:
         for c, f in list(facts.items()):
-            if not f or f.get("status") != "ok" or f.get("div_v") == 4 or c not in info:
+            if not f or f.get("status") != "ok" or f.get("fr_v") == 6 or c not in info:
                 continue
             if time.time() > deadline - 60:
                 break
-            h = fx.get("div", c)
-            hb = fx.get("bm", c)
-            if h is None or hb is None:
+            part = fubon.fetch_ratios(fx, c)
+            guard.check()
+            if not part:
                 continue
-            f["div"] = fubon.x_div(h)
-            f["bm"] = fubon.x_bm(hb)
-            f["div_v"] = 4
+            f.update(part)
+            f["fr_v"] = 6
             save_json(fpath(c), f)
-            n_divfix += 1
-        print(f"補抓股利與董監持股：{n_divfix} 檔")
+            n_fix += 1
+        print(f"補抓財務比率(ROE/負債比率)：{n_fix} 檔")
 
     # ---------- 3. 財報(輪流) ----------
     n_fund = n_nodata = 0
@@ -206,7 +204,7 @@ def main(argv=None):
                     "listed": r["listed"], "is_fin": is_fin}
             if status == "ok":
                 px = fubon.fetch_price(fx, c) or ((facts.get(c) or {}).get("px")) or {}
-                f = {**base, **part, "px": px, "px_at": iso(), "fund_at": iso(), "status": "ok", "div_v": 4}
+                f = {**base, **part, "px": px, "px_at": iso(), "fund_at": iso(), "status": "ok", "fr_v": 6}
                 facts[c] = f
                 save_json(fpath(c), f)
                 n_fund += 1
@@ -234,6 +232,7 @@ def main(argv=None):
             n_stale += 1
         ref = refs.get(c, {})
         an["hl"] = ref.get("hl")
+        an["fund_q"] = (f.get("frQ") or {}).get("per", [None])[0]
         an["links"] = {"profile": ref.get("url") or PROFILE_URL.format(c=c),
                        "report": REPORT_URL.format(c=c, p=report_period(today))}
         an["fund_at"], an["px_at"] = f.get("fund_at"), f.get("px_at")
@@ -241,7 +240,7 @@ def main(argv=None):
         s = scoring.summary(an)
         s["hl"] = an["hl"]
         rows.append(s)
-    rows.sort(key=lambda s: (-s["s"], -(s["up"] if s["up"] is not None else -999)))
+    rows.sort(key=scoring.sort_key)
 
     if not a.codes and len(rows) < 100 and os.path.exists(os.path.join(a.out, "index.json")):
         raise SystemExit("可分析的股票太少(%d)，疑似來源異常；不覆蓋既有資料。" % len(rows))
@@ -250,16 +249,21 @@ def main(argv=None):
             "n_price_updated": n_price, "n_fund_updated": n_fund, "n_nodata": n_nodata,
             "failures": failures[:60], "requests_ok": fx.n_ok, "requests_fail": fx.n_fail,
             "minutes": round((time.time() - t0) / 60, 1),
-            "config": {k: cfg.get(k) for k in ("pe_low", "pe_mid", "pe_high", "market_pe_adjust",
-                                               "risk_free_rate", "buffett_indicator", "min_score_elite")}}
+            "n_pick": sum(1 for s in rows if s["ok"]),
+            "config": {k: cfg.get(k) for k in ("roe_min", "roe_years", "pb_max", "yield_min",
+                                               "rev_growth_min", "debt_max")}}
     save_json(os.path.join(a.out, "index.json"), {"meta": meta, "stocks": rows})
     print(f"輸出完成：{len(rows)} 檔 → {a.out}")
 
     # 小量測試時，把結果印成表格(也寫進 GitHub 的 Job Summary)
     if a.codes:
-        lines = ["| 代號 | 名稱 | 現價 | 積分 | 5年級別 | 9項 | 品質 | 訊號 |", "|---|---|---|---|---|---|---|---|"]
+        def r1(v):
+            return "—" if v is None else round(v, 2)
+        lines = ["| 代號 | 名稱 | 現價 | ROE5年最低 | PB | 殖利率 | 營收成長 | 負債比 | 通過 | 結果 |",
+                 "|---|---|---|---|---|---|---|---|---|---|"]
         for s in rows:
-            lines.append(f"| {s['c']} | {s['n']} | {s['p']} | {s['s']} | {s['g']} | {s['k']}/9 | {s['q']} | {s['sig']} |")
+            lines.append(f"| {s['c']} | {s['n']} | {s['p']} | {r1(s['rm'])} | {r1(s['pb'])} | {r1(s['y'])} | "
+                         f"{r1(s['rg'])} | {r1(s['db'])} | {s['k']}/5 | {'入選' if s['ok'] else '—'} |")
         txt = "\n".join(lines)
         print(txt)
         sm = os.environ.get("GITHUB_STEP_SUMMARY")
