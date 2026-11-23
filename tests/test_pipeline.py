@@ -73,11 +73,15 @@ class TestPipeline(unittest.TestCase):
                 idx = rj(os.path.join(out, "index.json"))
                 self.assertEqual(idx["meta"]["n_stocks"], 1)
                 s = idx["stocks"][0]
-                self.assertEqual((s["c"], s["s"], s["g"], s["k"]), ("1707", 15, "A-（ROE下滑）", 8))
+                self.assertEqual((s["c"], s["f"]), ("1707", s["f"]))
+                self.assertEqual(len(s["f"]), 5)
                 self.assertEqual(s["p"], 81.8)
+                self.assertAlmostEqual(s["rm"], 15.6)
                 det = rj(os.path.join(out, "stocks", "1707.json"))
                 self.assertTrue(det["links"]["report"].endswith("_1707_AI1.pdf"))
-                self.assertEqual(len(det["matrix"]), 8)
+                self.assertEqual(len(det["checks"]), 5)
+                st0 = rj(os.path.join(state, "facts", "1707.json"))
+                self.assertEqual(st0["fr_v"], 6)
                 # 查無資料的股票應被標記，而不是當成失敗
                 st = rj(os.path.join(state, "facts", "9999.json"))
                 self.assertEqual(st["status"], "nodata")
