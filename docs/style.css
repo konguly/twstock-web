@@ -85,3 +85,11 @@ td.warn{background:var(--warn-bg);color:var(--warn)} td.bad{background:var(--bad
 .note{font-size:12px;color:var(--mute);margin:8px 0 0}
 .demo{background:var(--warn-bg);color:var(--warn);padding:8px 12px;border-radius:10px;font-size:13px;margin:0 0 12px}
 .about p,.about li{font-size:15px} .about code{background:var(--na-bg);padding:1px 5px;border-radius:5px}
+
+/* 防止手機版出現左右滑動：長訊號文字要能換行，頁面本身不橫向捲動 */
+html,body{max-width:100%;overflow-x:hidden}
+main,.card,.row>div,.meta,.sig{min-width:0;max-width:100%}
+.card{overflow-wrap:anywhere;word-break:break-word}
+.sig .chip,.card .chip{white-space:normal;line-height:1.5;border-radius:12px;max-width:100%}
+.meta .chip{white-space:nowrap}
+.sig{overflow-wrap:anywhere}
