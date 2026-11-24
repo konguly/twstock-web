@@ -5,7 +5,7 @@
   var app = document.getElementById("app");
   var updatedEl = document.getElementById("updated");
   var INDEX = null, IS_DEMO = false, CFG = {};
-  var state = { tab: "pick", q: "", ind: "", sort: "yield", shown: 60 };
+  var state = { tab: "pick", q: "", ind: "", sort: "group", shown: 60 };
   var PAGE = 60;
   var NAMES = ["ROE", "PB", "殖利率", "營收", "負債"];
 
@@ -60,6 +60,9 @@
   }
 
   /* ---------- 清單頁 ---------- */
+  // 優等生預設依產業分組；選其他排序方式時改成全部一起排名
+  function grouped() { return state.tab === "pick" && state.sort === "group"; }
+
   function filtered() {
     var q = state.q.trim().toLowerCase();
     var list = INDEX.stocks.filter(function (s) {
@@ -76,10 +79,11 @@
       rev: function (a, b) { return n(b.rg, -999) - n(a.rg, -999); },
       pass: function (a, b) { return (b.k || 0) - (a.k || 0) || n(b.y, -1) - n(a.y, -1); },
       code: function (a, b) { return a.c < b.c ? -1 : 1; }
-    }[state.sort];
-    if (state.tab === "pick") {
-      list.sort(function (a, b) { return (a.i || "").localeCompare(b.i || "", "zh-TW") || cmp(a, b); });
-    } else list.sort(cmp);
+    };
+    var by = cmp[state.sort] || cmp.yield;
+    if (grouped()) {
+      list.sort(function (a, b) { return (a.i || "").localeCompare(b.i || "", "zh-TW") || by(a, b); });
+    } else list.sort(by);
     return list;
   }
 
@@ -104,7 +108,7 @@
     var html = "";
     if (!list.length) {
       html = '<div class="empty">' + (state.tab === "pick" ? "目前沒有股票五項全部通過。" : "找不到符合的股票。") + "</div>";
-    } else if (state.tab === "pick") {
+    } else if (grouped()) {
       var cur = null, cnt = {};
       list.forEach(function (s) { cnt[s.i] = (cnt[s.i] || 0) + 1; });
       list.forEach(function (s) {
@@ -125,7 +129,7 @@
     INDEX.stocks.forEach(function (s) { if (s.i) inds[s.i] = 1; });
     var indOpts = '<option value="">全部產業</option>' + Object.keys(inds).sort(function (a, b) { return a.localeCompare(b, "zh-TW"); })
       .map(function (i) { return '<option' + (i === state.ind ? " selected" : "") + ">" + esc(i) + "</option>"; }).join("");
-    var sorts = [["yield", "殖利率高→低"], ["pb", "PB 低→高"], ["roe", "ROE 高→低"], ["rev", "營收成長高→低"], ["pass", "通過項目多→少"], ["code", "代號"]]
+    var sorts = (state.tab === "pick" ? [["group", "依產業分組"]] : []).concat([["yield", "殖利率高→低"], ["pb", "PB 低→高"], ["roe", "ROE 高→低"], ["rev", "營收成長高→低"], ["pass", "通過項目多→少"], ["code", "代號"]])
       .map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === state.sort ? " selected" : "") + ">" + x[1] + "</option>"; }).join("");
     app.innerHTML =
       (IS_DEMO ? '<div class="demo">尚未完成第一次更新，以下為示範資料。</div>' : "") +
