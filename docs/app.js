@@ -164,7 +164,10 @@
     var st = niceStep(hi - lo, n);
     return { lo: Math.floor(lo / st) * st, hi: Math.ceil(hi / st) * st, st: st };
   }
-  function growthSvg(g) {
+  function growthSvg(g0) {
+    // 和季營收、ROE 表一致：最新的期間放最左邊
+    var g = {};
+    Object.keys(g0).forEach(function (k) { g[k] = Array.isArray(g0[k]) ? g0[k].slice().reverse() : g0[k]; });
     var W = 640, H = 380, L = 62, R = 46, T = 64, B = 316, n = g.labels.length;
     var bars = [["gp", "營業毛利", "#4f81bd"], ["opex", "營業費用", "#c0504d"], ["opinc", "營業利益", "#9bbb59"]];
     var lines = [["gm", "毛利率", "#8064a2"], ["exr", "營業費用率", "#4bacc6"], ["om", "營業利益率", "#f79646"]];
@@ -255,7 +258,7 @@
       }
       if (a.growth && a.growth.labels && a.growth.labels.length) {
         html += '<section class="sec"><h2>成長力道</h2><div class="scroll">' + growthSvg(a.growth) + "</div>" +
-          '<p class="note">毛利率＝營業毛利÷營收、營業費用率＝營業費用÷營收、營業利益率＝營業利益÷營收；最後一欄為今年已公布各季的累計。</p></section>';
+          '<p class="note">毛利率＝營業毛利÷營收、營業費用率＝營業費用÷營收、營業利益率＝營業利益÷營收；最左邊一欄為今年已公布各季的累計。</p></section>';
       }
       var L = a.links || {};
       html += '<section class="sec"><h2>相關連結</h2><div class="links">' +
