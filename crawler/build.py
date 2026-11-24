@@ -43,6 +43,22 @@ def age_hours(s):
         return 1e9
 
 
+def price_fresh(f, t=None):
+    """股價是否不用重抓。
+    交易日 14:30 收盤資料出來後，只有「股價日期就是今天」才算新；
+    其他時間(盤中、清晨、週末)沿用舊規則：抓取後未滿 PRICE_FRESH_H 小時算新。
+    (以前只看抓取時間，下午太早抓到前一天的價格後，當天就不會再重抓。)"""
+    t = t or now()
+    if t.weekday() < 5 and (t.hour, t.minute) >= (14, 30):
+        d = str(((f.get("px") or {}).get("date")) or "")
+        try:
+            mm, dd = (int(x) for x in d.split("/")[-2:])
+        except ValueError:
+            return False
+        return (mm, dd) == (t.month, t.day)
+    return age_hours(f.get("px_at")) < PRICE_FRESH_H
+
+
 def report_period(d):
     """依法定申報期限推估已公告的最新一期財報檔名期別(與 Excel 版相同)。"""
     md = d.month * 100 + d.day
@@ -148,7 +164,7 @@ def main(argv=None):
         f = facts.get(c)
         if not f or f.get("status") != "ok":
             continue
-        if age_hours(f.get("px_at")) < PRICE_FRESH_H:
+        if price_fresh(f):
             continue
         if time.time() > deadline - 60:
             break
