@@ -46,7 +46,7 @@ for f in demo:
     a = scoring.analyze(f, None, today)
     a["hl"] = "示範資料" if f["code"] != "1707" else "保健食品、益生菌"
     a["links"] = {"profile": build.PROFILE_URL.format(c=f["code"]),
-                  "report": build.REPORT_URL.format(c=f["code"], p=build.report_period(today))}
+                  "report": build.REPORT_URL.format(c=f["code"], y=build.report_year(today))}
     a["fund_at"] = a["px_at"] = now
     a["fund_q"] = f["frQ"]["per"][0]
     build.save_json(os.path.join(OUT, "stocks", f["code"] + ".json"), a)
