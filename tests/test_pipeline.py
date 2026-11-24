@@ -78,7 +78,7 @@ class TestPipeline(unittest.TestCase):
                 self.assertEqual(s["p"], 81.8)
                 self.assertAlmostEqual(s["rm"], 15.6)
                 det = rj(os.path.join(out, "stocks", "1707.json"))
-                self.assertTrue(det["links"]["report"].endswith("_1707_AI1.pdf"))
+                self.assertIn("step=1&colorchg=1&co_id=1707&year=", det["links"]["report"])
                 self.assertEqual(len(det["checks"]), 5)
                 st0 = rj(os.path.join(state, "facts", "1707.json"))
                 self.assertEqual(st0["fr_v"], 6)
