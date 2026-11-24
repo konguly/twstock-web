@@ -18,8 +18,12 @@ from . import fubon, scoring, twse
 TZ = ZoneInfo("Asia/Taipei")
 PRICE_FRESH_H = 16          # 股價超過這麼多小時才重抓
 PROFILE_URL = "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zca/zca_{c}.djhtm"
-REPORT_URL = ("https://doc.twse.com.tw/server-java/t57sb01?step=9&colorchg=1&kind=A&co_id={c}"
-              "&filename={p}_{c}_AI1.pdf")
+REPORT_URL = "https://doc.twse.com.tw/server-java/t57sb01?step=1&colorchg=1&co_id={c}&year={y}&seamon=&mtype=A&"
+
+
+def report_year(d):
+    """最新一期已公告財報所屬年度(民國年)，給公開資訊觀測站電子書列表用。"""
+    return int(report_period(d)[:4]) - 1911
 
 
 def now():
@@ -234,7 +238,7 @@ def main(argv=None):
         an["hl"] = ref.get("hl")
         an["fund_q"] = (f.get("frQ") or {}).get("per", [None])[0]
         an["links"] = {"profile": ref.get("url") or PROFILE_URL.format(c=c),
-                       "report": REPORT_URL.format(c=c, p=report_period(today))}
+                       "report": REPORT_URL.format(c=c, y=report_year(today))}
         an["fund_at"], an["px_at"] = f.get("fund_at"), f.get("px_at")
         save_json(os.path.join(a.out, "stocks", c + ".json"), an)
         s = scoring.summary(an)
