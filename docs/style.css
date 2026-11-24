@@ -93,3 +93,7 @@ main,.card,.row>div,.meta,.sig{min-width:0;max-width:100%}
 .sig .chip,.card .chip{white-space:normal;line-height:1.5;border-radius:12px;max-width:100%}
 .meta .chip{white-space:nowrap}
 .sig{overflow-wrap:anywhere}
+
+/* 成長力道圖 */
+.gchart{width:100%;min-width:560px;height:auto;display:block;margin:6px 0}
+.gchart text.v{paint-order:stroke;stroke:var(--card);stroke-width:3px;stroke-linejoin:round}

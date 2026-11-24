@@ -149,6 +149,68 @@
     document.getElementById("sort").onchange = function () { state.sort = this.value; fillResults(); };
   }
 
+  /* ---------- 成長力道圖(SVG) ---------- */
+  function niceStep(span, n) {
+    var raw = span / n, p = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10)), m = raw / p;
+    return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p;
+  }
+  function axis(vals, n) {
+    var v = vals.filter(isNum), lo = Math.min(0, Math.min.apply(null, v)), hi = Math.max(0, Math.max.apply(null, v));
+    if (hi === lo) hi = lo + 1;
+    var st = niceStep(hi - lo, n);
+    return { lo: Math.floor(lo / st) * st, hi: Math.ceil(hi / st) * st, st: st };
+  }
+  function growthSvg(g) {
+    var W = 640, H = 380, L = 62, R = 46, T = 64, B = 316, n = g.labels.length;
+    var bars = [["gp", "營業毛利", "#4f81bd"], ["opex", "營業費用", "#c0504d"], ["opinc", "營業利益", "#9bbb59"]];
+    var lines = [["gm", "毛利率", "#8064a2"], ["exr", "營業費用率", "#4bacc6"], ["om", "營業利益率", "#f79646"]];
+    var la = axis([].concat(g.gp, g.opex, g.opinc), 5), ra = axis([].concat(g.gm, g.exr, g.om), 5);
+    var yl = function (v) { return B - (v - la.lo) / (la.hi - la.lo) * (B - T); };
+    var yr = function (v) { return B - (v - ra.lo) / (ra.hi - ra.lo) * (B - T); };
+    var gw = (W - L - R) / n, bw = gw * 0.22;
+    var cx = function (i) { return L + gw * (i + 0.5); };
+    var s = '<svg viewBox="0 0 ' + W + " " + H + '" class="gchart" role="img" aria-label="成長力道圖">';
+    // 圖例
+    bars.concat(lines).forEach(function (d, i) {
+      var x = 70 + (i % 3) * 190, y = 16 + Math.floor(i / 3) * 22;
+      s += i < 3 ? '<rect x="' + x + '" y="' + (y - 9) + '" width="16" height="11" fill="' + d[2] + '"/>'
+        : '<line x1="' + x + '" y1="' + (y - 4) + '" x2="' + (x + 18) + '" y2="' + (y - 4) + '" stroke="' + d[2] + '" stroke-width="3"/><circle cx="' + (x + 9) + '" cy="' + (y - 4) + '" r="3.5" fill="' + d[2] + '"/>';
+      s += '<text x="' + (x + 24) + '" y="' + y + '" font-size="13" fill="currentColor">' + d[1] + (i < 3 ? "（百萬元）" : "（%）") + "</text>";
+    });
+    // 格線與座標
+    for (var v = la.lo; v <= la.hi + la.st / 2; v += la.st) {
+      var y = yl(v);
+      s += '<line x1="' + L + '" y1="' + y + '" x2="' + (W - R) + '" y2="' + y + '" stroke="currentColor" stroke-opacity="' + (v === 0 ? 0.5 : 0.12) + '"/>';
+      s += '<text x="' + (L - 6) + '" y="' + (y + 4) + '" font-size="11" text-anchor="end" fill="currentColor" fill-opacity=".75">' + Math.round(v).toLocaleString("zh-TW") + "</text>";
+    }
+    for (v = ra.lo; v <= ra.hi + ra.st / 2; v += ra.st) {
+      s += '<text x="' + (W - R + 6) + '" y="' + (yr(v) + 4) + '" font-size="11" fill="currentColor" fill-opacity=".75">' + (+v.toFixed(1)) + "</text>";
+    }
+    // 長條
+    g.labels.forEach(function (lab, i) {
+      bars.forEach(function (d, k) {
+        var val = g[d[0]][i];
+        if (!isNum(val)) return;
+        var x = cx(i) + (k - 1.5) * bw, y0 = yl(0), y1 = yl(val);
+        s += '<rect x="' + x.toFixed(1) + '" y="' + Math.min(y0, y1).toFixed(1) + '" width="' + (bw - 1).toFixed(1) + '" height="' + Math.max(1, Math.abs(y1 - y0)).toFixed(1) + '" fill="' + d[2] + '"><title>' + lab + " " + d[1] + " " + fmt(val, 0) + " 百萬元</title></rect>";
+      });
+      s += '<text x="' + cx(i) + '" y="' + (B + 18) + '" font-size="12" text-anchor="middle" fill="currentColor">' + esc(lab) + "</text>";
+    });
+    // 折線與數值
+    lines.forEach(function (d, k) {
+      var pts = [];
+      g[d[0]].forEach(function (val, i) { if (isNum(val)) pts.push([cx(i), yr(val), val]); });
+      if (!pts.length) return;
+      s += '<polyline fill="none" stroke="' + d[2] + '" stroke-width="2.5" points="' + pts.map(function (p) { return p[0].toFixed(1) + "," + p[1].toFixed(1); }).join(" ") + '"/>';
+      pts.forEach(function (p) {
+        s += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3.5" fill="' + d[2] + '"/>' +
+          '<text x="' + p[0].toFixed(1) + '" y="' + (p[1] - 8).toFixed(1) + '" font-size="11" text-anchor="middle" fill="' + d[2] + '" font-weight="600" class="v">' + p[2].toFixed(1) + "</text>";
+      });
+    });
+    s += '<text x="' + (W / 2) + '" y="' + (H - 10) + '" font-size="11" text-anchor="middle" fill="currentColor" fill-opacity=".6">左軸：金額（百萬元）　右軸：比率（%）</text>';
+    return s + "</svg>";
+  }
+
   /* ---------- 個股頁 ---------- */
   function renderStock(code) {
     app.innerHTML = '<div class="empty">載入中…</div>';
@@ -186,6 +248,10 @@
           a.rev_q.map(function (q) { return "<th>" + esc(q) + "</th>"; }).join("") + "</tr><tr><td>營收</td>" +
           a.rev_vals.map(function (v, i) { return '<td class="' + (i < 4 ? "ok" : "") + '">' + fmt(v, 0) + "</td>"; }).join("") +
           "</tr></table></div><p class=\"note\">藍底＝近四季，與後面四季相比算成長率。</p></section>";
+      }
+      if (a.growth && a.growth.labels && a.growth.labels.length) {
+        html += '<section class="sec"><h2>成長力道</h2><div class="scroll">' + growthSvg(a.growth) + "</div>" +
+          '<p class="note">毛利率＝營業毛利÷營收、營業費用率＝營業費用÷營收、營業利益率＝營業利益÷營收；最後一欄為今年已公布各季的累計。</p></section>';
       }
       var L = a.links || {};
       html += '<section class="sec"><h2>相關連結</h2><div class="links">' +
