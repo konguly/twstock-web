@@ -190,7 +190,7 @@
       var L = a.links || {};
       html += '<section class="sec"><h2>相關連結</h2><div class="links">' +
         (L.profile ? '<a href="' + esc(L.profile) + '" target="_blank" rel="noopener">公司基本資料</a>' : "") +
-        (L.report ? '<a href="' + esc(L.report) + '" target="_blank" rel="noopener">最新財報 PDF</a>' : "") +
+        (L.report ? '<a href="' + esc(L.report) + '" target="_blank" rel="noopener">財報電子書</a>' : "") +
         '</div><p class="note">財報期別 ' + esc(a.fund_q || "—") + " · 財報抓取 " + tz(a.fund_at) + " · 股價 " + esc(a.price_date || "") + "</p></section>";
       app.innerHTML = html;
       window.scrollTo(0, 0);
