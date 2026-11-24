@@ -178,6 +178,24 @@ def main(argv=None):
             n_fix += 1
         print(f"補抓財務比率(ROE/負債比率)：{n_fix} 檔")
 
+    # ---------- 2c. 補抓損益表(成長力道圖需要營業毛利、營業費用) ----------
+    n_fix = 0
+    if not a.prices_only:
+        for c, f in list(facts.items()):
+            if not f or f.get("status") != "ok" or f.get("is_v") == 7 or c not in info:
+                continue
+            if time.time() > deadline - 60:
+                break
+            part = fubon.fetch_income(fx, c)
+            guard.check()
+            if not part:
+                continue
+            f.update(part)
+            f["is_v"] = 7
+            save_json(fpath(c), f)
+            n_fix += 1
+        print(f"補抓損益表(營業毛利/營業費用)：{n_fix} 檔")
+
     # ---------- 3. 財報(輪流) ----------
     n_fund = n_nodata = 0
     failures = []
@@ -208,7 +226,7 @@ def main(argv=None):
                     "listed": r["listed"], "is_fin": is_fin}
             if status == "ok":
                 px = fubon.fetch_price(fx, c) or ((facts.get(c) or {}).get("px")) or {}
-                f = {**base, **part, "px": px, "px_at": iso(), "fund_at": iso(), "status": "ok", "fr_v": 6}
+                f = {**base, **part, "px": px, "px_at": iso(), "fund_at": iso(), "status": "ok", "fr_v": 6, "is_v": 7}
                 facts[c] = f
                 save_json(fpath(c), f)
                 n_fund += 1

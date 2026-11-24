@@ -160,12 +160,14 @@ def has_nodata(html_text):
 
 def x_is_annual(lines):
     return {"per": period_vals(lines), "rev": fvals(lines, "營業收入淨額"),
+            "gp": fvals(lines, "營業毛利"), "opex": fvals(lines, "營業費用"),
             "opinc": fvals(lines, "營業利益"), "ni": fvals(lines, "常續性稅後淨利"),
             "sh": fvals(lines, "加權平均股數")}
 
 
 def x_is_quarter(lines):
     return {"per": period_vals(lines), "rev": fvals(lines, "營業收入淨額"),
+            "gp": fvals(lines, "營業毛利"), "opex": fvals(lines, "營業費用"),
             "opinc": fvals(lines, "營業利益"), "ni": fvals(lines, "常續性稅後淨利")}
 
 
@@ -304,6 +306,14 @@ def fetch_fundamentals(fx, code, is_fin):
         "div": x_div(pages["div"]) if pages.get("div") else {},
     }
     return f, "ok"
+
+
+def fetch_income(fx, code):
+    """只重抓損益表年/季兩頁(舊資料沒有營業毛利、營業費用時補抓用)。失敗回傳 None。"""
+    ha, hq = fx.get("isA", code), fx.get("isQ", code)
+    if ha is None or hq is None:
+        return None
+    return {"isA": x_is_annual(parse_main_lines(ha)), "isQ": x_is_quarter(parse_main_lines(hq))}
 
 
 def fetch_ratios(fx, code):

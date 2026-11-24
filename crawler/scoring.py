@@ -128,6 +128,7 @@ def analyze(f, cfg=None, today=None):
             ok = False          # 淨值為負：直接不通過
         checks.append({"key": key, "t": title, "label": label, "v": v, "op": op, "th": th, "u": unit, "ok": ok})
     out["checks"] = checks
+    out["growth"] = growth(f)
     n_pass = sum(1 for c in checks if c["ok"] is True)
     out["n_pass"] = n_pass
 
@@ -145,6 +146,40 @@ def analyze(f, cfg=None, today=None):
             msg += ("；" if msg else "") + "資料不足：" + "、".join(nas)
         out["ok"], out["verdict"] = False, msg
     return out
+
+
+def growth(f, years=7):
+    """成長力道圖：近 7 個年度 + 今年已公布各季累計的 營業毛利、營業費用、營業利益(百萬元)與三個比率(%)。"""
+    ia, iq = f.get("isA") or {}, f.get("isQ") or {}
+    out = {"labels": [], "gp": [], "opex": [], "opinc": [], "gm": [], "exr": [], "om": []}
+
+    def add(label, rev, gp, opex, opinc):
+        if rev is None or rev <= 0 or (gp is None and opinc is None):
+            return
+        pct = lambda v: round(v / rev * 100, 2) if v is not None else None
+        out["labels"].append(label)
+        for k, v in (("gp", gp), ("opex", opex), ("opinc", opinc)):
+            out[k].append(v)
+        out["gm"].append(pct(gp))
+        out["exr"].append(pct(opex))
+        out["om"].append(pct(opinc))
+
+    per = ia.get("per") or []
+    col = lambda d, k, i: _num((d.get(k) or [None] * 99)[i]) if i < len(d.get(k) or []) else None
+    for i in reversed(range(min(years, len(per)))):
+        add(f"{per[i]}年", col(ia, "rev", i), col(ia, "gp", i), col(ia, "opex", i), col(ia, "opinc", i))
+    # 今年(最新一季所屬年度)若尚未有年報：加上「前 N 季」累計
+    qper = iq.get("per") or []
+    if qper and "." in str(qper[0]):
+        y = str(qper[0]).split(".")[0]
+        if not per or str(per[0]) < y:
+            idx = [i for i, p in enumerate(qper) if str(p).startswith(y + ".")]
+            sums = {}
+            for k in ("rev", "gp", "opex", "opinc"):
+                vals = [col(iq, k, i) for i in idx]
+                sums[k] = sum(vals) if vals and all(v is not None for v in vals) else None
+            add(f"{y}前{len(idx)}季", sums["rev"], sums["gp"], sums["opex"], sums["opinc"])
+    return out if out["labels"] else None
 
 
 def summary(an):
