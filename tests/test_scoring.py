@@ -81,6 +81,15 @@ class TestScreen(unittest.TestCase):
         f = dict(self.f, is_fin=True)
         self.assertIsNone(scoring.analyze(f, today=TODAY)["ok"])
 
+    def test_growth_chart(self):
+        g = scoring.analyze(self.f, today=TODAY)["growth"]
+        self.assertEqual(g["labels"][0], "2019年")
+        self.assertEqual(g["labels"][-1], "2026前2季")
+        self.assertEqual(g["gp"][-2], 7697.0)
+        self.assertAlmostEqual(g["gm"][-2], 75.08)
+        self.assertAlmostEqual(g["om"][-2], 20.89)
+        self.assertEqual(len(g["labels"]), len(g["gm"]))
+
     def test_thresholds_from_config(self):
         a = scoring.analyze(dict(self.f, px=dict(self.f["px"], price=81.8, yield_pct=5)), {"roe_min": 16}, TODAY)
         self.assertFalse(a["checks"][0]["ok"])
