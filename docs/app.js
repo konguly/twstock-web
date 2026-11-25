@@ -1,4 +1,4 @@
-/* 存股雷達 V6：純靜態網頁(無外部套件)。資料來自 data/index.json 與 data/stocks/<代號>.json
+/* 存股雷達：純靜態網頁(無外部套件)。資料來自 data/index.json 與 data/stocks/<代號>.json
    選股法：近5年ROE每年≥5%、PB≤1.5、殖利率≥4%、近四季營收沒衰退、負債比≤50%，五項全過才入選。 */
 (function () {
   "use strict";
@@ -275,7 +275,7 @@
 
   /* ---------- 說明頁 ---------- */
   function renderAbout() {
-    app.innerHTML = '<a class="back" href="#/">‹ 回清單</a><section class="sec about"><h2>選股方法（V6）</h2>' +
+    app.innerHTML = '<a class="back" href="#/">‹ 回清單</a><section class="sec about"><h2>選股方法</h2>' +
       "<p>五項條件全部通過，才列入「各產業優等生」：</p><ol>" +
       "<li><b>近 " + CFG.roe_years + " 年 ROE 每年都 ≥ " + CFG.roe_min + "%</b>：每年都有基本獲利，沒有爛掉的年度。</li>" +
       "<li><b>股價淨值比 PB ≤ " + CFG.pb_max + "</b>：買得便宜（現價 ÷ 最新一季每股淨值）。</li>" +
