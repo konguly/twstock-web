@@ -139,7 +139,23 @@ def find_vals(lines, label):
         t = ln.split(" ")
         if len(t) >= 9 and "".join(t[:-8]) == label:
             return t[-8:]
+    # 新上市公司歷史不足 8 期(例如只有 7 年)：依「期別」列的期數取值，不足的補空白
+    n = n_periods(lines)
+    if n and n < 8:
+        for ln in lines:
+            t = ln.split(" ")
+            if len(t) >= n + 1 and "".join(t[:-n]) == label:
+                return t[-n:] + [""] * (8 - n)
     return None
+
+
+def n_periods(lines):
+    """「期別」列有幾期(找不到回傳 0)。"""
+    for ln in lines:
+        t = ln.split(" ")
+        if len(t) >= 2 and t[0] == "期別":
+            return len(t) - 1
+    return 0
 
 
 def fvals(lines, label):

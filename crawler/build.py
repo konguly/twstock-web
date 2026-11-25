@@ -224,7 +224,8 @@ def main(argv=None):
             if f is None:
                 todo.append((1e12, c))
             elif f.get("status") == "nodata":
-                if age_hours(f.get("fund_at")) > nd_h:
+                # nd_v=2：舊版遇到歷史不足 8 期的新上市公司會誤判為查無資料，改版後全部重抓一次
+                if age_hours(f.get("fund_at")) > nd_h or f.get("nd_v") != 2:
                     todo.append((age_hours(f.get("fund_at")), c))
             elif a.force_fund or age_hours(f.get("fund_at")) > ttl_h:
                 todo.append((age_hours(f.get("fund_at")), c))
@@ -247,7 +248,7 @@ def main(argv=None):
                 save_json(fpath(c), f)
                 n_fund += 1
             elif status == "nodata":
-                f = {**base, "status": "nodata", "fund_at": iso()}
+                f = {**base, "status": "nodata", "fund_at": iso(), "nd_v": 2}
                 facts[c] = f
                 save_json(fpath(c), f)
                 n_nodata += 1
