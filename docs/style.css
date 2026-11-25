@@ -70,6 +70,9 @@ a.card:active{transform:scale(.995)}
 .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
 th,td{padding:6px 8px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
+/* 年度ROE、季營收兩個表：第一欄固定寬、其餘等寬，上下欄位對齊 */
+.scroll table{table-layout:fixed;min-width:560px}
+.scroll th:first-child,.scroll td:first-child{width:56px}
 th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--card)}
 th{font-weight:600;color:var(--mute);font-size:12px}
 td.g{font-weight:600;text-align:center}
