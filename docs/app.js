@@ -98,6 +98,7 @@
       '<div class="row"><div><span class="name">' + esc(s.n) + '</span><span class="code">' + esc(s.c) + "</span></div>" +
       '<div class="price">' + fmt(s.p, 2) + "</div></div>" +
       '<div class="meta">' + flagsHtml(s.f) + tag + '<span>' + esc(s.i || "") + "</span></div>" +
+      (s.hl ? '<div class="hl">' + esc(s.hl) + "</div>" : "") +
       '<div class="chips">' + chips + "</div></a>";
   }
 
