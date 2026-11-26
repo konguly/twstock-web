@@ -126,6 +126,9 @@ def main(argv=None):
 
     cfg = scoring.merged_cfg(load_json(a.config, {}) or {})
     refs = load_json(a.refs, {}) or {}
+    # 補充的公司特色(新上市、創新板等)；同代號以補充檔為準
+    for c, v in (load_json("data_ref/highlights_extra.json", {}) or {}).items():
+        refs[c] = {**refs.get(c, {}), **v}
     fx = fubon.Fetcher(delay=float(cfg.get("request_delay_sec", 0.7)))
     guard = Guard(fx)
     t0 = time.time()
