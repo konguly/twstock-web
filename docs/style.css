@@ -101,3 +101,4 @@ main,.card,.row>div,.meta,.sig{min-width:0;max-width:100%}
 /* 成長力道圖 */
 .gchart{width:100%;min-width:560px;height:auto;display:block;margin:6px 0}
 .gchart text.v{paint-order:stroke;stroke:var(--card);stroke-width:3px;stroke-linejoin:round}
+.nav{display:flex;gap:14px}
