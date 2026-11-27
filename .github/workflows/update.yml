@@ -69,6 +69,9 @@ jobs:
           cp -r docs/. site/
           ls site site/data | head -20
 
+      - name: 更新美股收盤價（失敗就沿用上次，不影響台股）
+        run: python -m crawler.us_prices site/us/index.json || echo "美股股價更新失敗，沿用上次"
+
       - name: 儲存狀態到 data 分支(只保留最新一份，不累積歷史)
         if: ${{ inputs.codes == '' }}
         run: |
