@@ -230,7 +230,7 @@
     renderList();
   }
   fetch("us/index.json", { cache: "no-cache" }).then(function (r) { return r.json(); }).then(function (j) {
-    D = { meta: j.meta, stocks: j.rows.map(function (r) { var o = {}; j.cols.forEach(function (k, i) { if (r[i] != null) o[k] = r[i]; }); o.ok = o.f === "111"; o.k = (o.f || "").split("1").length - 1; return o; }) }; C = j.meta.config;
+    D = { meta: j.meta, stocks: j.rows.map(function (r) { var o = {}; j.cols.forEach(function (k, i) { if (r[i] != null) o[k] = r[i]; }); if (o.ipo) o.f = "---"; o.ok = o.f === "111"; o.k = (o.f || "").split("1").length - 1; return o; }) }; C = j.meta.config;
     updatedEl.textContent = j.meta.screen_date.replace(/-/g, "/") + " 換股名單 · 入選 " + j.meta.n_ok + " / " + j.meta.n + " 檔 · 股價 " + j.meta.price_date;
     window.addEventListener("hashchange", route); route();
   }).catch(function (e) { app.innerHTML = '<div class="empty">資料載入失敗：' + esc(e.message) + "</div>"; });
